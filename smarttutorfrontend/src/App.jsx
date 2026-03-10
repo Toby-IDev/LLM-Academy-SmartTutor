@@ -1,34 +1,46 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import DropdownMenu from './components/DropdownMenu'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="flex flex-col h-screen bg-beige-500">
+
+      <div className="header h-25 flex items-center px-6 text-black">
+
+        <div className="flex items-center gap-3">
+          <img
+            src="/src/assets/logo.png"
+            alt="Logo"
+            className="w-15"
+          />
+
+          <h1 className="text-lg font-semibold">
+            GPT-academy
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="hidden sm:flex gap-2">
+            <button className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition">
+              Setting
+            </button>
+            <button className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition">
+              Customize
+            </button>
+          </div>
+
+          <div className="sm:hidden">
+            <DropdownMenu />
+          </div>
+        </div>
+
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
+
+      <div className="content flex-1 bg-gray-100 p-6">
+
+        
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+
+    </div>
   )
 }
 
