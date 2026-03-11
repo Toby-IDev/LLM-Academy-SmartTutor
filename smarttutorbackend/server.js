@@ -23,6 +23,51 @@ app.listen(1888, () => {
     console.log("Server running on port 1888")
 })
 
+app.get("/api/getprojects", (req, res) => {
+
+    const projects = fs.readdirSync(UPLOAD_DIR, { withFileTypes: true })
+        .filter(dir => dir.isDirectory())
+        .map(dir => {
+
+            const projectPath = path.join(UPLOAD_DIR, dir.name)
+
+            const fileCount = fs.readdirSync(projectPath).length
+
+            return {
+                name: dir.name,
+                fileCount
+            }
+
+        })
+    res.json({ projects })
+})
+
+app.get("/api/getfiles", (req, res) => {
+
+    const projectName = req.query.projectName
+
+    if (!projectName) {
+        return res.status(400).json({
+            error: "projectName required"
+        })
+    }
+
+    const projectPath = path.join(UPLOAD_DIR, projectName)
+
+    if (!fs.existsSync(projectPath)) {
+        return res.status(404).json({
+            error: "Project not found"
+        })
+    }
+
+    const files = fs.readdirSync(projectPath, { withFileTypes: true })
+        .filter(file => file.isFile())
+        .map(file => file.name)
+
+    res.json({ files })
+
+})
+
 app.get("/api/createproject", (req, res) => {
 
     // Variable "Project Name", which is used to store the name of the current project.
