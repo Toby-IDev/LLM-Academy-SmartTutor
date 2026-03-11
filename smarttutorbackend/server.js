@@ -45,21 +45,17 @@ app.get("/api/getprojects", (req, res) => {
 app.get("/api/getfiles", (req, res) => {
 
     const projectName = req.query.projectName
-
     if (!projectName) {
         return res.status(400).json({
             error: "projectName required"
         })
     }
-
     const projectPath = path.join(UPLOAD_DIR, projectName)
-
     if (!fs.existsSync(projectPath)) {
         return res.status(404).json({
             error: "Project not found"
         })
     }
-
     const files = fs.readdirSync(projectPath, { withFileTypes: true })
         .filter(file => file.isFile())
         .map(file => file.name)
@@ -96,7 +92,7 @@ app.get("/api/createproject", (req, res) => {
 app.post("/api/upload/:projectName", (req, res) => {
     const fileType = req.headers["content-type"];
 
-    if (fileType != "multipart/form-data") {
+    if (fileType != "application/octet-stream") {
         return res.status(400).json({ error: "We don't support that file type" });
     }
 
@@ -109,7 +105,7 @@ app.post("/api/upload/:projectName", (req, res) => {
         });
     }
 
-    const fileName = req.headers["file-name"];
+    const fileName = decodeURIComponent(req.headers["filename"]);
     const filePath = path.join(projectPath, fileName);
     const writeStream = fs.createWriteStream(filePath);
 

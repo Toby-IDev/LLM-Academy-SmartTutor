@@ -5,10 +5,12 @@ import MainPage from './components/MainPage';
 
 function App() {
 
- const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [open, setOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState([]);
+
+  console.log("selectedProject:", selectedProject);
 
 
 
@@ -155,8 +157,8 @@ function App() {
         )}
 
       </div>
-      </div>
-    );
+    </div>
+  );
 }
 
-      export default App
+export default App
