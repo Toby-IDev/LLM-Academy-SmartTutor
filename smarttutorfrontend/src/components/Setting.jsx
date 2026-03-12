@@ -1,15 +1,15 @@
 import { useState } from 'react'
 
 
-function Dashboard() {
+function Setting() {
 
     return (
-        <div className="Dashboard">
+        <div className="Setting">
             <div className='header'>
-                <h1>Dashboard</h1>
+                <h1>Setting</h1>
             </div>
         </div>
     )
 }
 
-export default Dashboard
+export default Setting

@@ -1,6 +1,9 @@
 import DropdownMenu from './components/DropdownMenu'
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import MainPage from './components/MainPage';
+import Setting from './components/Setting';
+
 
 
 function App() {
@@ -9,6 +12,7 @@ function App() {
   const [open, setOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState([]);
+  const [view, setView] = useState("home");
 
   console.log("selectedProject:", selectedProject);
 
@@ -22,6 +26,8 @@ function App() {
     "bg-purple-200",
     "bg-pink-200"
   ];
+
+
 
   const getColor = (name) => {
     const index = name.length % colors.length;
@@ -62,7 +68,6 @@ function App() {
 
 
   return (
-
     <div className="flex flex-col h-screen bg-[var(--color-cream)]">
 
       <div className="header h-25 flex items-center px-6 text-black">
@@ -81,10 +86,17 @@ function App() {
 
         <div className="flex items-center gap-2 ml-auto">
           <div className="hidden sm:flex gap-2">
-            <button className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition">
+            <button
+              onClick={() => setView("setting")}
+              className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition"
+            >
               Setting
             </button>
-            <button className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition">
+
+            <button
+              onClick={() => setView("customize")}
+              className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition"
+            >
               Customize
             </button>
           </div>
@@ -97,8 +109,11 @@ function App() {
       </div>
 
       <div className="content flex-1 bg-gray-100 p-6 flex flex-wrap gap-6 justify-center items-start">
-
-        {selectedProject ? (
+        {view === "setting" ? (
+          <Setting />
+        ) : view === "customize" ? (
+          <Customize />
+        ) : selectedProject ? (
           <MainPage
             projectName={selectedProject}
             goBack={() => setSelectedProject(null)}
@@ -113,12 +128,8 @@ function App() {
               >
                 <div className={`h-20 ${getColor(project.name)}`}></div>
                 <div className="flex flex-col justify-center px-4 py-3 text-left flex-1">
-                  <div className="text-md font-semibold text-gray-800">
-                    {project.name}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {project.fileCount} files
-                  </div>
+                  <div className="text-md font-semibold text-gray-800">{project.name}</div>
+                  <div className="text-sm text-gray-500">{project.fileCount} files</div>
                 </div>
               </div>
             ))}
@@ -155,7 +166,6 @@ function App() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

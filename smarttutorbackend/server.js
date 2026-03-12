@@ -58,9 +58,20 @@ app.get("/api/getfiles", (req, res) => {
     }
     const files = fs.readdirSync(projectPath, { withFileTypes: true })
         .filter(file => file.isFile())
-        .map(file => file.name)
+        .map(file => {
+
+            const filePath = path.join(projectPath, file.name)
+            const stats = fs.statSync(filePath)
+
+            return {
+                name: file.name,
+                size: stats.size
+            }
+
+        })
 
     res.json({ files })
+
 
 })
 
