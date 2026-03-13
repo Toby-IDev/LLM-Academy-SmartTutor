@@ -105,6 +105,10 @@ function MainPage({ projectName, goBack }) {
                     </button>
                 </div>
             </div>
+            <div className="w-1/2 flex flex-col  p-4 justify-center items-center gap-2">
+                <div className="h-2/3 w-full bg-white"><h1>AI Generator Area</h1></div>
+                <div className="h-2/3 w-full bg-white"><h1>AI Generator Area</h1></div>
+            </div>
         </div>
 
     )

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainPage from './components/MainPage';
 import Setting from './components/Setting';
+import Customize from './components/Customize';
 
 
 
@@ -102,7 +103,7 @@ function App() {
           </div>
 
           <div className="sm:hidden">
-            <DropdownMenu />
+            <DropdownMenu setView={setView} />
           </div>
         </div>
 

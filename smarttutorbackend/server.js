@@ -11,6 +11,7 @@ const app = express()
 const UPLOAD_DIR = path.join(__dirname, "files");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 
+let apiKey = "";
 
 app.use(cors())
 app.use(express.json())
@@ -22,6 +23,17 @@ app.get("/api/test", (req, res) => {
 app.listen(1888, () => {
     console.log("Server running on port 1888")
 })
+
+
+app.post("/api/getAPI", (req, res) => {
+    const value = req.body.value;
+
+    apiKey = value;
+
+    console.log("API Key updated in backend:", apiKey);
+
+   
+});
 
 app.get("/api/getprojects", (req, res) => {
 
