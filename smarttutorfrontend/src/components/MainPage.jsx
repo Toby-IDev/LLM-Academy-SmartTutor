@@ -52,8 +52,6 @@ function MainPage({ projectName, goBack }) {
     };
 
     const deleteSelectedFiles = async () => {
-        console.log("Deleting files:", selectedFiles);
-        console.log("Project name:", projectName);
         await fetch("http://localhost:1888/api/deleteFiles", {
             method: "POST",
             headers: {
@@ -93,6 +91,21 @@ function MainPage({ projectName, goBack }) {
         } finally {
             setLoading(false);
         }
+    };
+
+
+    const saveSummaryPDF = async () => {
+        const content = AIsummaries.join("\n\n");
+
+        const date = new Date().toISOString().split("T")[0];
+
+        const res = await fetch("http://localhost:1888/api/saveSummaryPDF", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectName, content, fileName: `${projectName}_summary_${date}.pdf` }),
+        });
+
+        const data = await res.json();
     };
 
 
@@ -204,7 +217,7 @@ function MainPage({ projectName, goBack }) {
                         生成汇总笔记
                     </button>
                     <button
-                        onClick={getAlSummaries}
+                        onClick={saveSummaryPDF}
                         className="px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800"
                     >
                         保存汇总笔记

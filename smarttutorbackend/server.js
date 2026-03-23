@@ -3,6 +3,7 @@ const cors = require("cors")
 const fs = require("fs");
 const path = require("path");
 const OpenAI = require("openai");
+const PDFDocument = require("pdfkit");
 
 const app = express()
 
@@ -79,9 +80,9 @@ app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
         const completion = await client.chat.completions.create({
           model: "kimi-k2-turbo-preview",
           messages: [
-            { role: "system", content: "你是一个文档总结助手" },
+            { role: "system", content: "你是一个文档总结助手，专门服务于知识点的提炼和总结，你所接收的大部分文件都有可能是课件、提纲或复习资料" },
             { role: "system", content: fileContent },
-            { role: "user", content: "请用简洁的方式总结这个文件" },
+            { role: "user", content: "请总结文件，传输的文件之间势必会有一定的联系，我需要你将其中关键点进行提炼，并对于有可能是知识点的地方进行分点总结，一个单一文件的总结不超过500字，总共的字数不超过2000字，对于知识点可以利用你的能力进行一定的补全" },
           ],
         });
 
@@ -129,6 +130,32 @@ app.get("/api/getprojects", (req, res) => {
         })
     res.json({ projects })
 })
+
+app.get("/api/createproject", (req, res) => {
+
+    // Variable "Project Name", which is used to store the name of the current project.
+    const projectName = req.query.projectName
+
+    if (!projectName) {
+        return res.status(400).json({ error: "projectName required" })
+    }
+    const projectPath = path.join(UPLOAD_DIR, projectName)
+    if (!fs.existsSync(projectPath)) {
+        fs.mkdirSync(projectPath)
+        res.json({
+            message: "Project created successfully",
+            project: projectName
+        })
+
+    } else {
+
+        res.status(400).json({
+            error: "Project already exists"
+        })
+
+    }
+})
+
 
 app.get("/api/getfiles", (req, res) => {
 
@@ -192,30 +219,6 @@ app.post("/api/deleteFiles", (req, res) => {
     });
 });
 
-app.get("/api/createproject", (req, res) => {
-
-    // Variable "Project Name", which is used to store the name of the current project.
-    const projectName = req.query.projectName
-
-    if (!projectName) {
-        return res.status(400).json({ error: "projectName required" })
-    }
-    const projectPath = path.join(UPLOAD_DIR, projectName)
-    if (!fs.existsSync(projectPath)) {
-        fs.mkdirSync(projectPath)
-        res.json({
-            message: "Project created successfully",
-            project: projectName
-        })
-
-    } else {
-
-        res.status(400).json({
-            error: "Project already exists"
-        })
-
-    }
-})
 
 
 
@@ -255,3 +258,35 @@ app.post("/api/upload/:projectName", (req, res) => {
     });
 
 })
+
+
+app.post("/api/saveSummaryPDF", (req, res) => {
+    const { projectName, content, fileName } = req.body;
+
+    if (!projectName || !content) {
+        return res.status(400).json({ error: "projectName and content required" });
+    }
+
+    const projectPath = path.join(UPLOAD_DIR, "notes", projectName);
+    if (!fs.existsSync(projectPath)) fs.mkdirSync(projectPath);
+
+    const safeFileName = fileName || "AI_Summary.pdf";
+    const filePath = path.join(projectPath, safeFileName);
+
+    const doc = new PDFDocument();
+    const writeStream = fs.createWriteStream(filePath);
+
+    doc.pipe(writeStream);
+    doc.fontSize(12).text(content, { lineGap: 4 });
+    doc.end();
+
+    writeStream.on("finish", () => {
+        res.json({ message: "PDF saved successfully", file: safeFileName });
+    });
+
+    writeStream.on("error", (err) => {
+        res.status(500).json({ error: err.message });
+    });
+});
+
+
