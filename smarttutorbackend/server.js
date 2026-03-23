@@ -163,6 +163,35 @@ app.get("/api/getfiles", (req, res) => {
 
 })
 
+
+app.post("/api/deleteFiles", (req, res) => {
+    const { projectName, files } = req.body;
+
+    if (!projectName || !files || !Array.isArray(files)) {
+        return res.status(400).json({ error: "Invalid parameters" });
+    }
+
+    const projectPath = path.join(UPLOAD_DIR, projectName);
+
+    const results = [];
+
+    files.forEach((fileName) => {
+        const filePath = path.join(projectPath, fileName);
+
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath); 
+            results.push({ file: fileName, status: "deleted" });
+        } else {
+            results.push({ file: fileName, status: "not found" });
+        }
+    });
+
+    res.json({
+        message: "Delete operation completed",
+        results,
+    });
+});
+
 app.get("/api/createproject", (req, res) => {
 
     // Variable "Project Name", which is used to store the name of the current project.
@@ -187,6 +216,8 @@ app.get("/api/createproject", (req, res) => {
 
     }
 })
+
+
 
 app.post("/api/upload/:projectName", (req, res) => {
     const fileType = req.headers["content-type"];
