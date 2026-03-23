@@ -11,7 +11,10 @@ const app = express()
 // Variable "Project Name", which is used to store the name of the current project. 
 
 const UPLOAD_DIR = path.join(__dirname, "files");
+
+const UPLOAD_DIR2 = path.join(__dirname, "notes");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+if (!fs.existsSync(UPLOAD_DIR2)) fs.mkdirSync(UPLOAD_DIR2);
 
 let apiKey = "";
 
@@ -33,82 +36,82 @@ app.post("/api/getAPI", (req, res) => {
     apiKey = value;
 
     // console.log("API Key updated in backend:", apiKey);
-   
+
 });
 
 
 
 app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
-  
+
     const projectName = req.query.projectName;
 
-  if (!projectName) {
-    return res.status(400).json({ error: "projectName required" });
-  }
+    if (!projectName) {
+        return res.status(400).json({ error: "projectName required" });
+    }
 
-  if (!apiKey) {
-    return res.status(400).json({ error: "API key not set" });
-  }
+    if (!apiKey) {
+        return res.status(400).json({ error: "API key not set" });
+    }
 
-  const projectPath = path.join(UPLOAD_DIR, projectName);
+    const projectPath = path.join(UPLOAD_DIR, projectName);
 
-  if (!fs.existsSync(projectPath)) {
-    return res.status(404).json({ error: "Project not found" });
-  }
+    if (!fs.existsSync(projectPath)) {
+        return res.status(404).json({ error: "Project not found" });
+    }
 
-  const client = new OpenAI({
-    apiKey: apiKey,
-    baseURL: "https://api.moonshot.cn/v1",
-  });
-
-  try {
-    const files = fs.readdirSync(projectPath);
-
-    const tasks = files.map(async (file) => {
-      const filePath = path.join(projectPath, file);
-
-      if (!fs.statSync(filePath).isFile()) return null;
-
-      try {
-        const fileObject = await client.files.create({
-          file: fs.createReadStream(filePath),
-          purpose: "file-extract",
-        });
-
-        const fileContent = await (await client.files.content(fileObject.id)).text();
-
-        const completion = await client.chat.completions.create({
-          model: "kimi-k2-turbo-preview",
-          messages: [
-            { role: "system", content: "你是一个文档总结助手，专门服务于知识点的提炼和总结，你所接收的大部分文件都有可能是课件、提纲或复习资料" },
-            { role: "system", content: fileContent },
-            { role: "user", content: "请总结文件，传输的文件之间势必会有一定的联系，我需要你将其中关键点进行提炼，并对于有可能是知识点的地方进行分点总结，一个单一文件的总结不超过500字，总共的字数不超过2000字，对于知识点可以利用你的能力进行一定的补全" },
-          ],
-        });
-
-        return {
-          file,
-          summary: completion.choices[0].message.content,
-        };
-
-      } catch (err) {
-        return {
-          file,
-          error: err.message,
-        };
-      }
+    const client = new OpenAI({
+        apiKey: apiKey,
+        baseURL: "https://api.moonshot.cn/v1",
     });
 
-    const results = (await Promise.all(tasks)).filter(Boolean);
+    try {
+        const files = fs.readdirSync(projectPath);
 
-    res.json({
-      success: true,
-      data: results,
-    });
+        const tasks = files.map(async (file) => {
+            const filePath = path.join(projectPath, file);
 
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+            if (!fs.statSync(filePath).isFile()) return null;
+
+            try {
+                const fileObject = await client.files.create({
+                    file: fs.createReadStream(filePath),
+                    purpose: "file-extract",
+                });
+
+                const fileContent = await (await client.files.content(fileObject.id)).text();
+
+                const completion = await client.chat.completions.create({
+                    model: "kimi-k2-turbo-preview",
+                    messages: [
+                        { role: "system", content: "你是一个文档总结助手，专门服务于知识点的提炼和总结，你所接收的大部分文件都有可能是课件、提纲或复习资料" },
+                        { role: "system", content: fileContent },
+                        { role: "user", content: "请总结文件，传输的文件之间势必会有一定的联系，我需要你将其中关键点进行提炼，并对于有可能是知识点的地方进行分点总结，一个单一文件的总结不超过500字，总共的字数不超过2000字，对于知识点可以利用你的能力进行一定的补全" },
+                    ],
+                });
+
+                return {
+                    file,
+                    summary: completion.choices[0].message.content,
+                };
+
+            } catch (err) {
+                return {
+                    file,
+                    error: err.message,
+                };
+            }
+        });
+
+        const results = (await Promise.all(tasks)).filter(Boolean);
+
+        res.json({
+            success: true,
+            data: results,
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 
@@ -206,7 +209,7 @@ app.post("/api/deleteFiles", (req, res) => {
         const filePath = path.join(projectPath, fileName);
 
         if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath); 
+            fs.unlinkSync(filePath);
             results.push({ file: fileName, status: "deleted" });
         } else {
             results.push({ file: fileName, status: "not found" });
@@ -267,18 +270,33 @@ app.post("/api/saveSummaryPDF", (req, res) => {
         return res.status(400).json({ error: "projectName and content required" });
     }
 
-    const projectPath = path.join(UPLOAD_DIR, "notes", projectName);
-    if (!fs.existsSync(projectPath)) fs.mkdirSync(projectPath);
+    const projectPath = path.join(UPLOAD_DIR2, projectName);
+    if (!fs.existsSync(projectPath)) {
+        fs.mkdirSync(projectPath, { recursive: true });
+    }
 
     const safeFileName = fileName || "AI_Summary.pdf";
     const filePath = path.join(projectPath, safeFileName);
 
-    const doc = new PDFDocument();
-    const writeStream = fs.createWriteStream(filePath);
+     const doc = new PDFDocument({
+            size: "A4",
+            margin: 50,
+        });
 
-    doc.pipe(writeStream);
-    doc.fontSize(12).text(content, { lineGap: 4 });
-    doc.end();
+        const writeStream = fs.createWriteStream(filePath);
+        doc.pipe(writeStream);
+
+        const fontPath = path.join(__dirname, "fonts", "NanoFont.ttf"); 
+
+    
+        doc.font(fontPath);
+        
+
+        doc.fontSize(12).text(content, {
+            lineGap: 4,
+        });
+
+        doc.end();
 
     writeStream.on("finish", () => {
         res.json({ message: "PDF saved successfully", file: safeFileName });

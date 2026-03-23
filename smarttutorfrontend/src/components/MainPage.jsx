@@ -95,6 +95,7 @@ function MainPage({ projectName, goBack }) {
 
 
     const saveSummaryPDF = async () => {
+        
         const content = AIsummaries.join("\n\n");
 
         const date = new Date().toISOString().split("T")[0];
