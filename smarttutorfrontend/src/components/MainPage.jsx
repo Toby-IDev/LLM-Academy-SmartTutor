@@ -16,7 +16,7 @@ function MainPage({ projectName, goBack }) {
     };
 
     const uploadFile = async (file, projectName) => {
-        const res = await fetch(`http://localhost:1888/api/upload/${projectName.projectName}`, {
+        const res = await fetch(`http://localhost:1888/api/upload/${encodeURIComponent(projectName.projectName)}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/octet-stream", // raw file
@@ -38,6 +38,21 @@ function MainPage({ projectName, goBack }) {
 
         return "../src/assets/unknown.png";
     };
+
+
+    const getAllSummaries = async () => {
+
+        const res = await fetch(
+            `http://localhost:1888/api/fetchFilesAndGetAISummarize}`
+        );
+
+        const data = await res.json();
+
+        console.log("Summaries:", data.data);
+
+        return data.data || [];
+    };
+
 
     useEffect(() => {
         fetchFiles();
@@ -107,7 +122,7 @@ function MainPage({ projectName, goBack }) {
             </div>
             <div className="w-1/2 flex flex-col  p-4 justify-center items-center gap-2">
                 <div className="h-2/3 w-full bg-white"><h1>AI Generator Area</h1></div>
-                <div className="h-2/3 w-full bg-white"><h1>AI Generator Area</h1></div>
+                <button onClick={getAllSummaries}>Generate</button>
             </div>
         </div>
 

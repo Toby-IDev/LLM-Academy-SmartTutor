@@ -2,6 +2,7 @@ const express = require("express")
 const cors = require("cors")
 const fs = require("fs");
 const path = require("path");
+const OpenAI = require("openai");
 
 const app = express()
 
@@ -30,10 +31,85 @@ app.post("/api/getAPI", (req, res) => {
 
     apiKey = value;
 
-    console.log("API Key updated in backend:", apiKey);
-
+    // console.log("API Key updated in backend:", apiKey);
    
 });
+
+
+
+app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
+  
+    const projectName = req.query.projectName;
+
+  if (!projectName) {
+    return res.status(400).json({ error: "projectName required" });
+  }
+
+  if (!apiKey) {
+    return res.status(400).json({ error: "API key not set" });
+  }
+
+  const projectPath = path.join(UPLOAD_DIR, projectName);
+
+  if (!fs.existsSync(projectPath)) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+
+  const client = new OpenAI({
+    apiKey: apiKey,
+    baseURL: "https://api.moonshot.cn/v1",
+  });
+
+  try {
+    const files = fs.readdirSync(projectPath);
+
+    const tasks = files.map(async (file) => {
+      const filePath = path.join(projectPath, file);
+
+      if (!fs.statSync(filePath).isFile()) return null;
+
+      try {
+        const fileObject = await client.files.create({
+          file: fs.createReadStream(filePath),
+          purpose: "file-extract",
+        });
+
+        const fileContent = await (await client.files.content(fileObject.id)).text();
+
+        const completion = await client.chat.completions.create({
+          model: "kimi-k2-turbo-preview",
+          messages: [
+            { role: "system", content: "你是一个文档总结助手" },
+            { role: "system", content: fileContent },
+            { role: "user", content: "请用简洁的方式总结这个文件" },
+          ],
+        });
+
+        return {
+          file,
+          summary: completion.choices[0].message.content,
+        };
+
+      } catch (err) {
+        return {
+          file,
+          error: err.message,
+        };
+      }
+    });
+
+    const results = (await Promise.all(tasks)).filter(Boolean);
+
+    res.json({
+      success: true,
+      data: results,
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.get("/api/getprojects", (req, res) => {
 
