@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 
 
 
-function MainPage({ projectName, goBack }) {
+function MainPage({ projectName, goBack, setView }) {
 
     const [fileslists, setFilesLists] = useState([]);
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [notesLists, setNotesLists] = useState([]);
     const [loading, setLoading] = useState(false);
     const [AIsummaries, setAISummaries] = useState([]);
 
@@ -17,6 +18,16 @@ function MainPage({ projectName, goBack }) {
         const data = await res.json();
         console.log(data);
         setFilesLists(data.files || []);
+    };
+
+    const fetchNotes = async () => {
+        const res = await fetch(
+            `http://localhost:1888/api/getnotes?projectName=${encodeURIComponent(projectName)}`
+        );
+        const data = await res.json();
+        console.log("notes", data);
+        setNotesLists(data.notes || []);
+        console.log("notesLists", notesLists);
     };
 
     const uploadFile = async (file) => {
@@ -68,6 +79,25 @@ function MainPage({ projectName, goBack }) {
         console.log(fileslists)
     };
 
+    const deleteNote = async (fileName) => {
+        try {
+            await fetch("http://localhost:1888/api/deleteNote", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    projectName,
+                    fileName,
+                }),
+            });
+
+            fetchNotes();
+        } catch (err) {
+            console.error("删除失败:", err);
+        }
+    };
+
 
     const getAlSummaries = async () => {
         try {
@@ -95,24 +125,51 @@ function MainPage({ projectName, goBack }) {
 
 
     const saveSummaryPDF = async () => {
-        
+
         const content = AIsummaries.join("\n\n");
 
         const date = new Date().toISOString().split("T")[0];
 
+        const hour = new Date().getHours();
+
+        const minute = new Date().getMinutes();
+
+        const second = new Date().getSeconds();
+
         const res = await fetch("http://localhost:1888/api/saveSummaryPDF", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ projectName, content, fileName: `${projectName}_summary_${date}.pdf` }),
+            body: JSON.stringify({ projectName, content, fileName: `${projectName}_summary_${date}_${hour}:${minute}:${second}.pdf` }),
         });
 
         const data = await res.json();
+
+        fetchNotes();
     };
+
+    const downloadNote = (fileName) => {
+        const url = `http://localhost:1888/api/downloadNotes?projectName=${encodeURIComponent(projectName)}&fileName=${encodeURIComponent(fileName)}`;
+
+        window.open(url);
+    };
+
+
+    const getQuestions = async () => {
+
+
+        const res = await fetch(
+            `http://localhost:1888/api/fetchQuestionsBasedOnSummaries?projectName=${encodeURIComponent(projectName)}`
+        );
+
+        const data = await res.json();
+
+        console.log("Questions:", data);
+    }
 
 
     useEffect(() => {
         fetchFiles();
-
+        fetchNotes();
     }, []);
 
     return (
@@ -213,18 +270,67 @@ function MainPage({ projectName, goBack }) {
                 <div className="flex flex-row gap-5 items-center justify-center">
                     <button
                         onClick={getAlSummaries}
-                        className="px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800"
+                        className="px-4 py-2 bg-black text-white text-sm rounded-xl hover:bg-gray-800"
                     >
                         生成汇总笔记
                     </button>
                     <button
                         onClick={saveSummaryPDF}
-                        className="px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800"
+                        className="px-4 py-2 bg-black text-white text-sm rounded-xl hover:bg-gray-800"
                     >
                         保存汇总笔记
                     </button>
                 </div>
+                <div className="flex-1 flex flex-col w-full h-full bg-white rounded-xl p-2 border border-gray-300 overflow-y-auto">
+                    <div className="text-gray-600 mb-2 font-semibold">已生成笔记</div>
+                    {notesLists.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                            {notesLists.map((note) => (
+                                <div
+                                    key={note.name}
+                                    className="p-2 rounded-md border border-gray-200 bg-gray-50 flex justify-between items-center text-sm hover:bg-gray-100"
+                                >
+                                    <div
+                                        className="flex items-center gap-2 truncate cursor-pointer"
+                                        onClick={() => console.log("点击笔记:", note.name)}
+                                    >
+                                        <img src="../src/assets/notes.png" className="w-5 h-5" />
+                                        <span className="truncate">{note.name}</span>
+                                    </div>
 
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                downloadNote(note.name);
+                                            }}
+                                            className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
+                                        >
+                                            下载
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteNote(note.name);
+                                            }}
+                                            className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
+                                        >
+                                            删除
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-gray-400 text-sm">暂无笔记</div>
+                    )}
+                    <button
+                        onClick={() => {setView("testing"); getQuestions();}}
+                        className="mt-3 px-4 py-2 bg-black text-white text-sm rounded-xl hover:bg-gray-800"
+                    >
+                        在线测试beta
+                    </button>
+                </div>
             </div>
         </div>
 

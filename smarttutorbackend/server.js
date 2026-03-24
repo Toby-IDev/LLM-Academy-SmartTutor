@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const OpenAI = require("openai");
 const PDFDocument = require("pdfkit");
+const { json } = require("stream/consumers");
 
 const app = express()
 
@@ -194,6 +195,66 @@ app.get("/api/getfiles", (req, res) => {
 })
 
 
+app.get("/api/getnotes", (req, res) => {
+    const projectName = req.query.projectName;
+
+    if (!projectName) {
+        return res.status(400).json({ error: "projectName required" });
+    }
+
+    const projectPath = path.join(UPLOAD_DIR2, projectName);
+
+    if (!fs.existsSync(projectPath)) {
+        return res.status(404).json({ error: "Project not found" });
+    }
+
+    const notes = fs.readdirSync(projectPath, { withFileTypes: true })
+        .filter(file => {
+            if (!file.isFile()) return false;
+
+            const ext = path.extname(file.name).toLowerCase(); 
+            return ext === ".pdf"; 
+        })
+        .map(file => ({
+            name: file.name,
+            path: path.join(projectPath, file.name),
+        }));
+
+    res.json({ notes });
+});
+
+
+app.get("/api/downloadNotes", (req, res) => {
+    const { projectName, fileName } = req.query;
+
+    if (!projectName || !fileName) {
+        return res.status(400).json({ error: "Missing params" });
+    }
+
+    const filePath = path.join(UPLOAD_DIR2, projectName, fileName);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found" });
+    }
+
+    res.download(filePath);
+});
+
+app.post("/api/deleteNote", (req, res) => {
+    const { projectName, fileName } = req.body;
+
+    const filePath = path.join(__dirname, "notes", projectName, fileName);
+
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        return res.json({ success: true });
+    }
+
+    res.status(404).json({ error: "File not found" });
+});
+
+
+
 app.post("/api/deleteFiles", (req, res) => {
     const { projectName, files } = req.body;
 
@@ -278,25 +339,35 @@ app.post("/api/saveSummaryPDF", (req, res) => {
     const safeFileName = fileName || "AI_Summary.pdf";
     const filePath = path.join(projectPath, safeFileName);
 
-     const doc = new PDFDocument({
-            size: "A4",
-            margin: 50,
-        });
 
-        const writeStream = fs.createWriteStream(filePath);
-        doc.pipe(writeStream);
+    const txtFileName = safeFileName.replace(/\.pdf$/i, ".txt");
+    const txtPath = path.join(projectPath, txtFileName);
 
-        const fontPath = path.join(__dirname, "fonts", "NanoFont.ttf"); 
+    try {
+        fs.writeFileSync(txtPath, content, "utf8");
+    } catch (err) {
+        return res.status(500).json({ error: "TXT 保存失败: " + err.message });
+    }
 
-    
-        doc.font(fontPath);
-        
+    const doc = new PDFDocument({
+        size: "A4",
+        margin: 50,
+    });
 
-        doc.fontSize(12).text(content, {
-            lineGap: 4,
-        });
+    const writeStream = fs.createWriteStream(filePath);
+    doc.pipe(writeStream);
 
-        doc.end();
+    const fontPath = path.join(__dirname, "fonts", "NanoFont.ttf");
+
+
+    doc.font(fontPath);
+
+
+    doc.fontSize(12).text(content, {
+        lineGap: 4,
+    });
+
+    doc.end();
 
     writeStream.on("finish", () => {
         res.json({ message: "PDF saved successfully", file: safeFileName });
@@ -308,3 +379,88 @@ app.post("/api/saveSummaryPDF", (req, res) => {
 });
 
 
+
+app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
+
+    const projectName = req.query.projectName;
+
+    console.log("Received request for questions with projectName:", projectName);
+
+    if (!projectName) {
+        return res.status(400).json({ error: "projectName required" });
+    }
+
+    if (!apiKey) {
+        return res.status(400).json({ error: "API key not set" });
+    }
+
+    const projectPath = path.join(UPLOAD_DIR2, projectName); // notes 文件夹
+
+    if (!fs.existsSync(projectPath)) {
+        return res.status(404).json({ error: "Project not found" });
+    }
+
+    const client = new OpenAI({
+        apiKey: apiKey,
+        baseURL: "https://api.moonshot.cn/v1",
+    });
+
+    try {
+        const files = fs.readdirSync(projectPath);
+
+        const txtFiles = files.filter(file => path.extname(file).toLowerCase() === ".txt");
+
+        const fileContents = txtFiles
+            .map((file) => {
+                const filePath = path.join(projectPath, file);
+
+                if (!fs.statSync(filePath).isFile()) return null;
+
+                try {
+                    return fs.readFileSync(filePath, "utf8");
+                } catch {
+                    return null;
+                }
+            })
+            .filter(Boolean);
+
+        if (fileContents.length === 0) {
+            return res.status(400).json({ error: "No readable files found" });
+        }
+
+        const allContent = fileContents.join("\n\n").slice(0, 8000);
+
+        const completion = await client.chat.completions.create({
+            model: "kimi-k2-turbo-preview",
+            messages: [
+                {
+                    role: "system",
+                    content: "你是一个出题助手，专门根据学习资料生成测试题",
+                },
+                {
+                    role: "user",
+                    content: `请根据以下文件里面所记录的有关知识，生成 5 道单选题。要求：1. 每题包含 question, options, answer 2. options 必须是 A/B/C/D 3. answer 是正确选项（如 A）4. 返回 JSON 格式如下：[{"question": "...","options": {"A": "...","B": "...","C": "...","D": "..."},"answer": "A"}]资料如下：${allContent}`,
+                },
+            ],
+        });
+
+        let questions;
+
+        try {
+            questions = JSON.parse(completion.choices[0].message.content);
+        } catch (err) {
+            return res.status(500).json({
+                error: "AI 返回的不是合法 JSON",
+                raw: completion.choices[0].message.content,
+            });
+        }
+
+        res.json({
+            success: true,
+            data: questions,
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});

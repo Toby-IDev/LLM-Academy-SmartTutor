@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import MainPage from './components/MainPage';
 import Setting from './components/Setting';
 import Customize from './components/Customize';
-
+import Testing from './components/Testing';
 
 
 function App() {
@@ -16,7 +16,6 @@ function App() {
   const [view, setView] = useState("home");
 
   console.log("selectedProject:", selectedProject);
-
 
 
   const colors = [
@@ -114,10 +113,16 @@ function App() {
           <Setting />
         ) : view === "customize" ? (
           <Customize />
+        ) : view === "testing" ? (
+          <Testing
+            projectName={selectedProject}
+            setView={setView}
+          />
         ) : selectedProject ? (
           <MainPage
             projectName={selectedProject}
             goBack={() => setSelectedProject(null)}
+            setView={setView}
           />
         ) : (
           <>
