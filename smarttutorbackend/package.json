@@ -1,7 +1,9 @@
 {
   "dependencies": {
     "cors": "^2.8.6",
+    "docx": "^9.6.1",
     "express": "^5.2.1",
+    "mammoth": "^1.12.0",
     "openai": "^6.32.0",
     "pdfkit": "^0.18.0"
   }

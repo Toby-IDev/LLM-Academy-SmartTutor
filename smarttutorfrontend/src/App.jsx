@@ -66,9 +66,9 @@ function App() {
 
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--color-cream)]">
+    <div className="flex flex-col h-screen bg-gray-100">
 
-      <div className="header h-25 flex items-center px-6 text-black">
+      <div className="header h-25 shrink-0 flex items-center px-6 text-black">
 
         <div className="flex items-center gap-3">
           <img
@@ -106,7 +106,7 @@ function App() {
 
       </div>
 
-      <div className="content flex-1 bg-gray-100 p-6 flex flex-wrap gap-6 justify-center items-start">
+      <div className="content flex-1 bg-gray-100 p-6 flex flex-wrap gap-6 justify-center items-start h-full">
         {view === "setting" ? (
           <Setting />
         ) : view === "customize" ? (

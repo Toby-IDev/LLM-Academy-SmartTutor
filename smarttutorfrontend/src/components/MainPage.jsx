@@ -27,7 +27,6 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
         const data = await res.json();
         console.log("notes", data);
         setNotesLists(data.notes || []);
-        console.log("notesLists", notesLists);
     };
 
     const uploadFile = async (file) => {
@@ -137,7 +136,7 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
 
         const second = new Date().getSeconds();
 
-        const res = await fetch("http://localhost:1888/api/saveSummaryPDF", {
+        const res = await fetch("http://localhost:1888/api/saveSummaryDocx", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ projectName, content, fileName: `${projectName}_summary_${date}_${hour}:${minute}:${second}.pdf` }),
@@ -209,6 +208,7 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
                 <div className="mt-4 flex gap-4 items-center justify-center">
                     <input
                         type="file"
+                        accept=".docx"
                         id="fileInput"
                         className="hidden"
                         onChange={(e) => {

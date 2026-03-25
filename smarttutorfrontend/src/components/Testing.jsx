@@ -13,6 +13,9 @@ function Testing({ projectName }) {
     useEffect(() => {
 
         const fetchQuestions = async () => {
+
+            setQuestions([]);
+            
             const res = await fetch(
                 `http://localhost:1888/api/fetchQuestionsBasedOnSummaries?projectName=${encodeURIComponent(projectName)}`
             );

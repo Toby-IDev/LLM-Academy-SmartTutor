@@ -4,7 +4,9 @@ const fs = require("fs");
 const path = require("path");
 const OpenAI = require("openai");
 const PDFDocument = require("pdfkit");
+const mammoth = require("mammoth");
 const { json } = require("stream/consumers");
+const { Document, Packer, Paragraph, TextRun } = require("docx");
 
 const app = express()
 
@@ -16,6 +18,21 @@ const UPLOAD_DIR = path.join(__dirname, "files");
 const UPLOAD_DIR2 = path.join(__dirname, "notes");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 if (!fs.existsSync(UPLOAD_DIR2)) fs.mkdirSync(UPLOAD_DIR2);
+
+
+async function extractDocx(filePath) {
+    const result = await mammoth.extractRawText({ path: filePath });
+    return result.value; // 纯文本
+}
+
+function splitText(text, maxLength = 3000) {
+    const chunks = [];
+    for (let i = 0; i < text.length; i += maxLength) {
+        chunks.push(text.slice(i, i + maxLength));
+    }
+    return chunks;
+}
+
 
 let apiKey = "";
 
@@ -39,6 +56,82 @@ app.post("/api/getAPI", (req, res) => {
     // console.log("API Key updated in backend:", apiKey);
 
 });
+
+
+
+// app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
+
+//     const projectName = req.query.projectName;
+
+//     if (!projectName) {
+//         return res.status(400).json({ error: "projectName required" });
+//     }
+
+//     if (!apiKey) {
+//         return res.status(400).json({ error: "API key not set" });
+//     }
+
+//     const projectPath = path.join(UPLOAD_DIR, projectName);
+
+//     if (!fs.existsSync(projectPath)) {
+//         return res.status(404).json({ error: "Project not found" });
+//     }
+
+//     const client = new OpenAI({
+//         apiKey: apiKey,
+//         baseURL: "https://api.moonshot.cn/v1",
+//     });
+
+//     try {
+//         const files = fs.readdirSync(projectPath);
+
+//         const tasks = files.map(async (file) => {
+
+//             const filePath = path.join(projectPath, file);
+
+//             if (!fs.statSync(filePath).isFile()) return null;
+
+//             try {
+//                 const fileObject = await client.files.create({
+//                     file: fs.createReadStream(filePath),
+//                     purpose: "file-extract",
+//                 });
+
+//                 const fileContent = await (await client.files.content(fileObject.id)).text();
+
+//                 const completion = await client.chat.completions.create({
+//                     model: "kimi-k2-turbo-preview",
+//                     messages: [
+//                         { role: "system", content: "你是一个文档总结助手，专门服务于知识点的提炼和总结，你所接收的大部分文件都有可能是课件、提纲或复习资料" },
+//                         { role: "system", content: fileContent },
+//                         { role: "user", content: "请总结文件，传输的文件之间势必会有一定的联系，我需要你将其中关键点进行提炼，并对于有可能是知识点的地方进行分点总结，一个单一文件的总结不超过500字，总共的字数不超过2000字，对于知识点可以利用你的能力进行一定的补全" },
+//                     ],
+//                 });
+
+//                 return {
+//                     file,
+//                     summary: completion.choices[0].message.content,
+//                 };
+
+//             } catch (err) {
+//                 return {
+//                     file,
+//                     error: err.message,
+//                 };
+//             }
+//         });
+
+//         const results = (await Promise.all(tasks)).filter(Boolean);
+
+//         res.json({
+//             success: true,
+//             data: results,
+//         });
+
+//     } catch (err) {
+//         res.status(500).json({ error: err.message });
+//     }
+// });
 
 
 
@@ -69,30 +162,74 @@ app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
         const files = fs.readdirSync(projectPath);
 
         const tasks = files.map(async (file) => {
+
             const filePath = path.join(projectPath, file);
 
             if (!fs.statSync(filePath).isFile()) return null;
 
+            if (!file.endsWith(".docx")) {
+                return {
+                    file,
+                    error: "仅支持 .docx 文件",
+                };
+            }
+
             try {
-                const fileObject = await client.files.create({
-                    file: fs.createReadStream(filePath),
-                    purpose: "file-extract",
-                });
 
-                const fileContent = await (await client.files.content(fileObject.id)).text();
+                let text = await extractDocx(filePath);
 
-                const completion = await client.chat.completions.create({
+                if (!text || text.trim().length < 20) {
+                    return {
+                        file,
+                        error: "文档内容为空或解析失败",
+                    };
+                }
+
+
+                const chunks = splitText(text);
+
+                const partialSummaries = [];
+
+                for (const chunk of chunks) {
+                    const completion = await client.chat.completions.create({
+                        model: "kimi-k2-turbo-preview",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "你是一个文档总结助手，擅长提炼知识点"
+                            },
+                            {
+                                role: "user",
+                                content: `请总结以下内容的关键知识点：\n${chunk}`
+                            }
+                        ],
+                    });
+
+                    partialSummaries.push(
+                        completion.choices[0].message.content
+                    );
+                }
+
+                const finalCompletion = await client.chat.completions.create({
                     model: "kimi-k2-turbo-preview",
                     messages: [
-                        { role: "system", content: "你是一个文档总结助手，专门服务于知识点的提炼和总结，你所接收的大部分文件都有可能是课件、提纲或复习资料" },
-                        { role: "system", content: fileContent },
-                        { role: "user", content: "请总结文件，传输的文件之间势必会有一定的联系，我需要你将其中关键点进行提炼，并对于有可能是知识点的地方进行分点总结，一个单一文件的总结不超过500字，总共的字数不超过2000字，对于知识点可以利用你的能力进行一定的补全" },
+                        {
+                            role: "system",
+                            content: "你是一个知识整理专家"
+                        },
+                        {
+                            role: "user",
+                            content: `以下是多个分段总结，请整合为最终知识点总结：要求：1.分点输出 2.不超过800字 3.结构清晰 4.可以适当补充知识点
+
+${partialSummaries.join("\n")}
+                            `
+                        }
                     ],
                 });
 
                 return {
                     file,
-                    summary: completion.choices[0].message.content,
+                    summary: finalCompletion.choices[0].message.content,
                 };
 
             } catch (err) {
@@ -212,8 +349,8 @@ app.get("/api/getnotes", (req, res) => {
         .filter(file => {
             if (!file.isFile()) return false;
 
-            const ext = path.extname(file.name).toLowerCase(); 
-            return ext === ".pdf"; 
+            const ext = path.extname(file.name).toLowerCase();
+            return ext === ".docx";
         })
         .map(file => ({
             name: file.name,
@@ -324,7 +461,8 @@ app.post("/api/upload/:projectName", (req, res) => {
 })
 
 
-app.post("/api/saveSummaryPDF", (req, res) => {
+app.post("/api/saveSummaryDocx", async (req, res) => {
+    
     const { projectName, content, fileName } = req.body;
 
     if (!projectName || !content) {
@@ -332,16 +470,15 @@ app.post("/api/saveSummaryPDF", (req, res) => {
     }
 
     const projectPath = path.join(UPLOAD_DIR2, projectName);
+
     if (!fs.existsSync(projectPath)) {
         fs.mkdirSync(projectPath, { recursive: true });
     }
 
-    const safeFileName = fileName || "AI_Summary.pdf";
+    const safeFileName = (fileName || "AI_Summary").replace(/\.docx$/i, "") + ".docx";
     const filePath = path.join(projectPath, safeFileName);
 
-
-    const txtFileName = safeFileName.replace(/\.pdf$/i, ".txt");
-    const txtPath = path.join(projectPath, txtFileName);
+    const txtPath = filePath.replace(/\.docx$/, ".txt");
 
     try {
         fs.writeFileSync(txtPath, content, "utf8");
@@ -349,44 +486,135 @@ app.post("/api/saveSummaryPDF", (req, res) => {
         return res.status(500).json({ error: "TXT 保存失败: " + err.message });
     }
 
-    const doc = new PDFDocument({
-        size: "A4",
-        margin: 50,
-    });
+    try {
+        const paragraphs = content.split("\n").map(line =>
+            new Paragraph({
+                children: [
+                    new TextRun({
+                        text: line,
+                        size: 24, // 12pt
+                    }),
+                ],
+                spacing: { after: 200 },
+            })
+        );
 
-    const writeStream = fs.createWriteStream(filePath);
-    doc.pipe(writeStream);
+        const doc = new Document({
+            sections: [
+                {
+                    properties: {},
+                    children: paragraphs,
+                },
+            ],
+        });
 
-    const fontPath = path.join(__dirname, "fonts", "NanoFont.ttf");
+        const buffer = await Packer.toBuffer(doc);
 
+        fs.writeFileSync(filePath, buffer);
 
-    doc.font(fontPath);
+        res.json({
+            message: "DOCX saved successfully",
+            file: safeFileName,
+        });
 
-
-    doc.fontSize(12).text(content, {
-        lineGap: 4,
-    });
-
-    doc.end();
-
-    writeStream.on("finish", () => {
-        res.json({ message: "PDF saved successfully", file: safeFileName });
-    });
-
-    writeStream.on("error", (err) => {
+    } catch (err) {
         res.status(500).json({ error: err.message });
-    });
+    }
 });
+
+
+// app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
+
+//     const projectName = req.query.projectName;
+
+//     console.log(projectName)
+
+//     console.log("Received request for questions with projectName:", projectName);
+
+//     if (!projectName) {
+//         return res.status(400).json({ error: "projectName required" });
+//     }
+
+//     if (!apiKey) {
+//         return res.status(400).json({ error: "API key not set" });
+//     }
+
+//     const projectPath = path.join(UPLOAD_DIR2, projectName);
+
+//     if (!fs.existsSync(projectPath)) {
+//         return res.status(404).json({ error: "Project not found" });
+//     }
+
+//     const client = new OpenAI({
+//         apiKey: apiKey,
+//         baseURL: "https://api.moonshot.cn/v1",
+//     });
+
+//     try {
+//         const files = fs.readdirSync(projectPath);
+
+//         const txtFiles = files.filter(file => path.extname(file).toLowerCase() === ".txt");
+
+//         const fileContents = txtFiles
+//             .map((file) => {
+//                 const filePath = path.join(projectPath, file);
+
+//                 if (!fs.statSync(filePath).isFile()) return null;
+
+//                 try {
+//                     return fs.readFileSync(filePath, "utf8");
+//                 } catch {
+//                     return null;
+//                 }
+//             })
+//             .filter(Boolean);
+
+//         if (fileContents.length === 0) {
+//             return res.status(400).json({ error: "No readable files found" });
+//         }
+
+//         const allContent = fileContents.join("\n\n").slice(0, 8000);
+
+//         const completion = await client.chat.completions.create({
+//             model: "kimi-k2-turbo-preview",
+//             messages: [
+//                 {
+//                     role: "system",
+//                     content: "你是一个出题助手，专门根据学习资料生成测试题",
+//                 },
+//                 {
+//                     role: "user",
+//                     content: `请根据以下文件里面所记录的有关知识，生成 10 道单选题。要求：1. 每题包含 question, options, answer 2. options 必须是 A/B/C/D 3. answer 是正确选项（如 A）4. 返回 JSON 格式如下：[{"question": "...","options": {"A": "...","B": "...","C": "...","D": "..."},"answer": "A"}]资料如下：${allContent}`,
+//                 },
+//             ],
+//         });
+
+//         let questions;
+
+//         try {
+//             questions = JSON.parse(completion.choices[0].message.content);
+//         } catch (err) {
+//             return res.status(500).json({
+//                 error: "AI 返回的不是合法 JSON",
+//                 raw: completion.choices[0].message.content,
+//             });
+//         }
+
+//         res.json({
+//             success: true,
+//             data: questions,
+//         });
+
+//     } catch (err) {
+//         res.status(500).json({ error: err.message });
+//     }
+// });
 
 
 
 app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
 
     const projectName = req.query.projectName;
-
-    console.log(projectName)
-
-    console.log("Received request for questions with projectName:", projectName);
 
     if (!projectName) {
         return res.status(400).json({ error: "projectName required" });
@@ -396,7 +624,7 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
         return res.status(400).json({ error: "API key not set" });
     }
 
-    const projectPath = path.join(UPLOAD_DIR2, projectName); 
+    const projectPath = path.join(UPLOAD_DIR2, projectName);
 
     if (!fs.existsSync(projectPath)) {
         return res.status(404).json({ error: "Project not found" });
@@ -407,10 +635,24 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
         baseURL: "https://api.moonshot.cn/v1",
     });
 
+    function safeParseJSON(text) {
+        try {
+            return JSON.parse(text);
+        } catch {
+            const match = text.match(/```json\s*([\s\S]*?)```/);
+            if (match) {
+                return JSON.parse(match[1]);
+            }
+            throw new Error("JSON parse failed");
+        }
+    }
+
     try {
         const files = fs.readdirSync(projectPath);
 
-        const txtFiles = files.filter(file => path.extname(file).toLowerCase() === ".txt");
+        const txtFiles = files.filter(file =>
+            path.extname(file).toLowerCase() === ".txt"
+        );
 
         const fileContents = txtFiles
             .map((file) => {
@@ -430,36 +672,47 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
             return res.status(400).json({ error: "No readable files found" });
         }
 
-        const allContent = fileContents.join("\n\n").slice(0, 8000);
+        const allContent = fileContents.join("\n\n");
 
-        const completion = await client.chat.completions.create({
-            model: "kimi-k2-turbo-preview",
-            messages: [
-                {
-                    role: "system",
-                    content: "你是一个出题助手，专门根据学习资料生成测试题",
-                },
-                {
-                    role: "user",
-                    content: `请根据以下文件里面所记录的有关知识，生成 10 道单选题。要求：1. 每题包含 question, options, answer 2. options 必须是 A/B/C/D 3. answer 是正确选项（如 A）4. 返回 JSON 格式如下：[{"question": "...","options": {"A": "...","B": "...","C": "...","D": "..."},"answer": "A"}]资料如下：${allContent}`,
-                },
-            ],
-        });
+        const chunks = splitText(allContent);
 
-        let questions;
+        const allQuestions = [];
 
-        try {
-            questions = JSON.parse(completion.choices[0].message.content);
-        } catch (err) {
-            return res.status(500).json({
-                error: "AI 返回的不是合法 JSON",
-                raw: completion.choices[0].message.content,
+        while (allQuestions.length < 10) {
+
+            const randomChunk = chunks[Math.floor(Math.random() * chunks.length)];
+
+            const completion = await client.chat.completions.create({
+                model: "kimi-k2-turbo-preview",
+                messages: [
+                    {
+                        role: "system",
+                        content: "你是一个严格输出 JSON 的出题助手"
+                    },
+                    {
+                        role: "user",
+                        content: `请基于以下内容生成 10 道单选题。要求：1. 必须返回 JSON 数组 2. 不要任何解释 3. 不要 markdown 格式：[{"question": "...","options": { "A": "...","B": "...","C": "...","D": "..."},"answer": "A"}]内容：${randomChunk}`
+                    }
+                ],
             });
+
+            try {
+                const parsed = safeParseJSON(
+                    completion.choices[0].message.content
+                );
+
+                allQuestions.push(...parsed);
+
+            } catch (err) {
+                console.error("JSON解析失败:", err.message);
+            }
         }
+
+        const finalQuestions = allQuestions.slice(0, 10);
 
         res.json({
             success: true,
-            data: questions,
+            data: finalQuestions,
         });
 
     } catch (err) {
