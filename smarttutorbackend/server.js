@@ -384,6 +384,8 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
 
     const projectName = req.query.projectName;
 
+    console.log(projectName)
+
     console.log("Received request for questions with projectName:", projectName);
 
     if (!projectName) {
@@ -394,7 +396,7 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
         return res.status(400).json({ error: "API key not set" });
     }
 
-    const projectPath = path.join(UPLOAD_DIR2, projectName); // notes 文件夹
+    const projectPath = path.join(UPLOAD_DIR2, projectName); 
 
     if (!fs.existsSync(projectPath)) {
         return res.status(404).json({ error: "Project not found" });
@@ -439,7 +441,7 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
                 },
                 {
                     role: "user",
-                    content: `请根据以下文件里面所记录的有关知识，生成 5 道单选题。要求：1. 每题包含 question, options, answer 2. options 必须是 A/B/C/D 3. answer 是正确选项（如 A）4. 返回 JSON 格式如下：[{"question": "...","options": {"A": "...","B": "...","C": "...","D": "..."},"answer": "A"}]资料如下：${allContent}`,
+                    content: `请根据以下文件里面所记录的有关知识，生成 10 道单选题。要求：1. 每题包含 question, options, answer 2. options 必须是 A/B/C/D 3. answer 是正确选项（如 A）4. 返回 JSON 格式如下：[{"question": "...","options": {"A": "...","B": "...","C": "...","D": "..."},"answer": "A"}]资料如下：${allContent}`,
                 },
             ],
         });

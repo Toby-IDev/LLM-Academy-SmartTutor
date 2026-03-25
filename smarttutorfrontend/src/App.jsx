@@ -14,8 +14,7 @@ function App() {
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState([]);
   const [view, setView] = useState("home");
-
-  console.log("selectedProject:", selectedProject);
+  const [questions, setQuestions] = useState([]);
 
 
   const colors = [
@@ -53,7 +52,6 @@ function App() {
       }
 
       const data = await res.json();
-      console.log(data);
       setOpen(false);
       setProjectName("");
       fetchProjects();

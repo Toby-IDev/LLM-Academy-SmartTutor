@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 
 
-function MainPage({ projectName, goBack, setView }) {
+function MainPage({ projectName, goBack, setView, setQuestions }) {
 
     const [fileslists, setFilesLists] = useState([]);
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -34,7 +34,7 @@ function MainPage({ projectName, goBack, setView }) {
         const res = await fetch(`http://localhost:1888/api/upload/${encodeURIComponent(projectName)}`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/octet-stream", // raw file
+                "Content-Type": "application/octet-stream", 
                 "filename": encodeURIComponent(file.name)
             },
             body: file
@@ -114,6 +114,7 @@ function MainPage({ projectName, goBack, setView }) {
             console.log("Summaries:", summaries);
 
             setAISummaries(summaries);
+
             return summaries;
         } catch (err) {
             console.error(err);
@@ -154,23 +155,12 @@ function MainPage({ projectName, goBack, setView }) {
     };
 
 
-    const getQuestions = async () => {
-
-
-        const res = await fetch(
-            `http://localhost:1888/api/fetchQuestionsBasedOnSummaries?projectName=${encodeURIComponent(projectName)}`
-        );
-
-        const data = await res.json();
-
-        console.log("Questions:", data);
-    }
-
-
-    useEffect(() => {
+   useEffect(() => {
+    if (projectName) {
         fetchFiles();
         fetchNotes();
-    }, []);
+    }
+}, [projectName]);
 
     return (
         <div className="flex h-full w-full">
@@ -325,7 +315,7 @@ function MainPage({ projectName, goBack, setView }) {
                         <div className="text-gray-400 text-sm">暂无笔记</div>
                     )}
                     <button
-                        onClick={() => {setView("testing"); getQuestions();}}
+                        onClick={() => setView("testing")}
                         className="mt-3 px-4 py-2 bg-black text-white text-sm rounded-xl hover:bg-gray-800"
                     >
                         在线测试beta
