@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 
-function Customize() {
+function WrongQuestionBook() {
 
 
     return (
@@ -11,4 +11,4 @@ function Customize() {
     )
 }
 
-export default Customize
+export default WrongQuestionBook
