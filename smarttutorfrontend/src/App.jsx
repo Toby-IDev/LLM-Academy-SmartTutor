@@ -1,10 +1,9 @@
 import DropdownMenu from './components/DropdownMenu'
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import MainPage from './components/MainPage';
 import Setting from './components/Setting';
-import Customize from './components/Customize';
 import Testing from './components/Testing';
+import WrongQuestionBook from './components/WrongQuestionBook';
 
 
 function App() {
@@ -14,7 +13,6 @@ function App() {
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState([]);
   const [view, setView] = useState("home");
-  const [questions, setQuestions] = useState([]);
 
 
   const colors = [
@@ -32,6 +30,8 @@ function App() {
     const index = name.length % colors.length;
     return colors[index];
   };
+
+
 
   const fetchProjects = async () => {
     const res = await fetch("http://localhost:1888/api/getprojects");
@@ -60,6 +60,39 @@ function App() {
     }
   };
 
+
+
+  const deleteProject = async (name) => {
+    if (!window.confirm(`确定要删除项目 "${name}" 吗？此操作不可撤销！`)) return;
+    try {
+      const res = await fetch("http://localhost:1888/api/deleteProject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectName: name }),
+      });
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("返回不是 JSON:", text);
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setProjects((prev) => prev.filter((p) => p.name !== name));
+        if (selectedProject === name) {
+          setSelectedProject(null);
+          setView("home");
+        }
+      } else {
+        console.error("删除失败:", data);
+      }
+    } catch (err) {
+      console.error("删除项目请求失败:", err);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
   }, []);
@@ -70,7 +103,7 @@ function App() {
 
       <div className="header h-25 shrink-0 flex items-center px-6 text-black">
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" onClick={() => { setSelectedProject(null); setView("home") }}>
           <img
             src="/src/assets/logo.png"
             alt="Logo"
@@ -86,16 +119,15 @@ function App() {
           <div className="hidden sm:flex gap-2">
             <button
               onClick={() => setView("setting")}
-              className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition"
+              className="px-4 py-2 text-white font-semibold bg-gradient-to-r from-gray-800 to-black rounded-full shadow-md hover:shadow-lg hover:scale-105 transition transform duration-200 border border-gray-700"
             >
-              Setting
+              Setting 设置
             </button>
-
             <button
               onClick={() => setView("customize")}
-              className="px-3 py-1 text-semibold rounded-full border border-gray-500 hover:bg-gray-100 transition"
+              className="px-4 py-2 text-white font-semibold bg-gradient-to-r from-gray-800 to-black rounded-full shadow-md hover:shadow-lg hover:scale-105 transition transform duration-200 border border-gray-700"
             >
-              Customize
+              错题本
             </button>
           </div>
 
@@ -108,18 +140,20 @@ function App() {
 
       <div className="content flex-1 bg-gray-100 p-6 flex flex-wrap gap-6 justify-center items-start h-full">
         {view === "setting" ? (
-          <Setting />
-        ) : view === "customize" ? (
-          <Customize />
+          <Setting
+            setView={setView} />
+        ) : view === "wrongquestionbook" ? (
+          <WrongQuestionBook />
         ) : view === "testing" ? (
           <Testing
             projectName={selectedProject}
+            goBack={() => { setSelectedProject(null); setView("home") }}
             setView={setView}
           />
         ) : selectedProject ? (
           <MainPage
             projectName={selectedProject}
-            goBack={() => setSelectedProject(null)}
+            goBack={() => { setSelectedProject(null); setView("home") }}
             setView={setView}
           />
         ) : (
@@ -131,9 +165,24 @@ function App() {
                 className="w-64 h-40 bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden flex flex-col"
               >
                 <div className={`h-20 ${getColor(project.name)}`}></div>
-                <div className="flex flex-col justify-center px-4 py-3 text-left flex-1">
-                  <div className="text-md font-semibold text-gray-800">{project.name}</div>
-                  <div className="text-sm text-gray-500">{project.fileCount} files</div>
+
+                <div className="flex flex-col justify-center px-4 py-3 flex-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-md font-semibold text-gray-800">{project.name}</div>
+                      <div className="text-sm text-gray-500">{project.fileCount} files</div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteProject(project.name);
+                      }}
+                      className="w-15 h-8 text-sm font-semibold flex items-center justify-center rounded-xl border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition"
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

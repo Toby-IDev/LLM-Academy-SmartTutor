@@ -7,9 +7,9 @@ function DropdownMenu({ setView }) {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100 transition"
+        className="px-4 py-2 text-white font-semibold bg-gradient-to-r from-gray-800 to-black rounded-full shadow-md hover:shadow-lg hover:scale-105 transition transform duration-200 border border-gray-700"
       >
-        Menu
+        Menu菜单
       </button>
 
       {open && (
@@ -22,7 +22,7 @@ function DropdownMenu({ setView }) {
             }}
             className="px-4 py-2 hover:bg-gray-100 text-left"
           >
-            Setting
+            Setting设置
           </button>
 
           <button
@@ -32,7 +32,7 @@ function DropdownMenu({ setView }) {
             }}
             className="px-4 py-2 hover:bg-gray-100 text-left"
           >
-            Customize
+            错题本
           </button>
 
         </div>

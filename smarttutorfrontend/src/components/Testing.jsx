@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-function Testing({ projectName }) {
+function Testing({ projectName, goBack }) {
 
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState([]);
@@ -15,7 +15,7 @@ function Testing({ projectName }) {
         const fetchQuestions = async () => {
 
             setQuestions([]);
-            
+
             const res = await fetch(
                 `http://localhost:1888/api/fetchQuestionsBasedOnSummaries?projectName=${encodeURIComponent(projectName)}`
             );

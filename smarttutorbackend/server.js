@@ -16,6 +16,7 @@ const app = express()
 const UPLOAD_DIR = path.join(__dirname, "files");
 
 const UPLOAD_DIR2 = path.join(__dirname, "notes");
+
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 if (!fs.existsSync(UPLOAD_DIR2)) fs.mkdirSync(UPLOAD_DIR2);
 
@@ -33,8 +34,29 @@ function splitText(text, maxLength = 3000) {
     return chunks;
 }
 
+function extractContent(completion) {
+    const choice = completion?.choices?.[0];
+
+    if (!choice) return null;
+
+    if (choice.message?.content && typeof choice.message.content === "string") {
+        return choice.message.content;
+    }
+
+    if (Array.isArray(choice.message?.content)) {
+        return choice.message.content.map(item => item.text).join("");
+    }
+
+    if (choice.text) {
+        return choice.text;
+    }
+
+    return null;
+}
+
 
 let apiKey = "";
+let bigmodel = "";
 
 app.use(cors())
 app.use(express.json())
@@ -49,11 +71,14 @@ app.listen(1888, () => {
 
 
 app.post("/api/getAPI", (req, res) => {
+
     const value = req.body.value;
+
+    const model = req.body.model;
 
     apiKey = value;
 
-    // console.log("API Key updated in backend:", apiKey);
+    bigmodel = model;
 
 });
 
@@ -153,9 +178,26 @@ app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
         return res.status(404).json({ error: "Project not found" });
     }
 
+    let model;
+    let baseURL;
+
+    if (bigmodel === "Kimi") {
+        model = "kimi-k2-turbo-preview"
+        baseURL = "https://api.moonshot.cn/v1"
+
+    } else if (bigmodel === "Qwen") {
+        model = "qwen-plus"
+        baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+    } else if (bigmodel === "Deepseek") {
+        model = "deepseek-chat"
+        baseURL = "https://api.deepseek.com"
+    }
+
+
     const client = new OpenAI({
         apiKey: apiKey,
-        baseURL: "https://api.moonshot.cn/v1",
+        baseURL: baseURL,
     });
 
     try {
@@ -192,7 +234,7 @@ app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
 
                 for (const chunk of chunks) {
                     const completion = await client.chat.completions.create({
-                        model: "kimi-k2-turbo-preview",
+                        model: model,
                         messages: [
                             {
                                 role: "system",
@@ -205,13 +247,16 @@ app.get("/api/fetchFilesAndGetAISummarize", async (req, res) => {
                         ],
                     });
 
-                    partialSummaries.push(
-                        completion.choices[0].message.content
-                    );
+                    const content = extractContent(completion)
+                    if (!content) {
+                        return { file, error: "模型未返回有效内容" };
+                    }
+
+                    partialSummaries.push(content);
                 }
 
                 const finalCompletion = await client.chat.completions.create({
-                    model: "kimi-k2-turbo-preview",
+                    model: model,
                     messages: [
                         {
                             role: "system",
@@ -227,9 +272,15 @@ ${partialSummaries.join("\n")}
                     ],
                 });
 
+                const finalContent = extractContent(finalCompletion)
+                if (!finalContent) {
+                    return { file, error: "整合总结失败" };
+                }
+
                 return {
                     file,
-                    summary: finalCompletion.choices[0].message.content,
+                    // summary: finalCompletion.choices[0].message.content,
+                    summary: finalContent
                 };
 
             } catch (err) {
@@ -333,6 +384,7 @@ app.get("/api/getfiles", (req, res) => {
 
 
 app.get("/api/getnotes", (req, res) => {
+
     const projectName = req.query.projectName;
 
     if (!projectName) {
@@ -375,6 +427,21 @@ app.get("/api/downloadNotes", (req, res) => {
     }
 
     res.download(filePath);
+});
+
+app.post("/api/deleteProject", (req, res) => {
+    const { projectName } = req.body;
+    try {
+        const filePath = path.join(UPLOAD_DIR, projectName);
+        const notePath = path.join(UPLOAD_DIR2, projectName);
+
+        if (fs.existsSync(filePath)) fs.rmSync(filePath, { recursive: true, force: true });
+        if (fs.existsSync(notePath)) fs.rmSync(notePath, { recursive: true, force: true });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 app.post("/api/deleteNote", (req, res) => {
@@ -462,7 +529,7 @@ app.post("/api/upload/:projectName", (req, res) => {
 
 
 app.post("/api/saveSummaryDocx", async (req, res) => {
-    
+
     const { projectName, content, fileName } = req.body;
 
     if (!projectName || !content) {
@@ -630,9 +697,25 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
         return res.status(404).json({ error: "Project not found" });
     }
 
+    let model;
+    let baseURL;
+
+    if (bigmodel === "Kimi") {
+        model = "kimi-k2-turbo-preview"
+        baseURL = "https://api.moonshot.cn/v1"
+
+    } else if (bigmodel === "Qwen") {
+        model = "qwen-plus"
+        baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    }
+    else if (bigmodel === "Deepseek") {
+        model = "deepseek-chat"
+        baseURL = "https://api.deepseek.com"
+    }
+
     const client = new OpenAI({
         apiKey: apiKey,
-        baseURL: "https://api.moonshot.cn/v1",
+        baseURL: baseURL,
     });
 
     function safeParseJSON(text) {
@@ -683,7 +766,7 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
             const randomChunk = chunks[Math.floor(Math.random() * chunks.length)];
 
             const completion = await client.chat.completions.create({
-                model: "kimi-k2-turbo-preview",
+                model: model,
                 messages: [
                     {
                         role: "system",
@@ -696,10 +779,15 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
                 ],
             });
 
+            let content = extractContent(completion)
+
+            if (!content) {
+                console.error("模型未返回有效内容", completion);
+                continue; 
+            }
+
             try {
-                const parsed = safeParseJSON(
-                    completion.choices[0].message.content
-                );
+                const parsed = safeParseJSON(content);
 
                 allQuestions.push(...parsed);
 
