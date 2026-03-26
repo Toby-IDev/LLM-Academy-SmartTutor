@@ -13,7 +13,7 @@ function App() {
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState([]);
   const [view, setView] = useState("home");
-
+  const [wrongQuestionsGlobal, setWrongQuestionsGlobal] = useState([]);
 
   const colors = [
     "bg-red-200",
@@ -124,7 +124,7 @@ function App() {
               Setting 设置
             </button>
             <button
-              onClick={() => setView("customize")}
+              onClick={() => setView("wrongquestionsbook")}
               className="px-4 py-2 text-white font-semibold bg-gradient-to-r from-gray-800 to-black rounded-full shadow-md hover:shadow-lg hover:scale-105 transition transform duration-200 border border-gray-700"
             >
               错题本
@@ -142,11 +142,15 @@ function App() {
         {view === "setting" ? (
           <Setting
             setView={setView} />
-        ) : view === "wrongquestionbook" ? (
-          <WrongQuestionBook />
+        ) : view === "wrongquestionsbook" ? (
+          <WrongQuestionBook
+            goBack={() => { setSelectedProject(null); setView("home") }}
+            setView={setView}
+            wrongQuestionsGlobal={wrongQuestionsGlobal} />
         ) : view === "testing" ? (
           <Testing
             projectName={selectedProject}
+            setWrongQuestionsGlobal={setWrongQuestionsGlobal}
             goBack={() => { setSelectedProject(null); setView("home") }}
             setView={setView}
           />

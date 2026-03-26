@@ -33,7 +33,7 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
         const res = await fetch(`http://localhost:1888/api/upload/${encodeURIComponent(projectName)}`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/octet-stream", 
+                "Content-Type": "application/octet-stream",
                 "filename": encodeURIComponent(file.name)
             },
             body: file
@@ -124,7 +124,7 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
     };
 
 
-    const saveSummaryPDF = async () => {
+    const saveSummaryDocx = async () => {
 
         const content = AIsummaries.join("\n\n");
 
@@ -139,7 +139,7 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
         const res = await fetch("http://localhost:1888/api/saveSummaryDocx", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ projectName, content, fileName: `${projectName}_summary_${date}_${hour}:${minute}:${second}.pdf` }),
+            body: JSON.stringify({ projectName, content, fileName: `${projectName}_summary_${date}_${hour}:${minute}:${second}` }),
         });
 
         const data = await res.json();
@@ -154,12 +154,12 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
     };
 
 
-   useEffect(() => {
-    if (projectName) {
-        fetchFiles();
-        fetchNotes();
-    }
-}, [projectName]);
+    useEffect(() => {
+        if (projectName) {
+            fetchFiles();
+            fetchNotes();
+        }
+    }, [projectName]);
 
     return (
         <div className="flex h-full w-full">
@@ -205,7 +205,7 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
                     </div>
                 </div>
 
-                <div className="mt-4 flex gap-4 items-center justify-center">
+                <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:gap-4 items-center justify-center">
                     <input
                         type="file"
                         accept=".docx"
@@ -218,19 +218,19 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
                     />
                     <button
                         onClick={() => document.getElementById("fileInput").click()}
-                        className="px-4 py-2 text-white text-sm border border-gray-300 bg-black rounded-xl hover:bg-gray-800 transition"
+                        className="px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm text-white border border-gray-300 bg-black rounded-xl hover:bg-gray-800 transition w-full sm:w-auto"
                     >
                         上传文件
                     </button>
                     <button
                         onClick={goBack}
-                        className="px-4 py-2 text-white text-sm border border-gray-300 bg-black rounded-xl hover:bg-gray-800 transition"
+                        className="px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm text-white border border-gray-300 bg-black rounded-xl hover:bg-gray-800 transition w-full sm:w-auto"
                     >
                         ← 返回首页
                     </button>
                     <button
                         onClick={deleteSelectedFiles}
-                        className="px-4 py-2 text-sm text-white bg-black rounded-xl hover:bg-red-600"
+                        className="px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm text-white bg-black rounded-xl hover:bg-red-600 transition w-full sm:w-auto"
                     >
                         删除选中文件
                     </button>
@@ -240,9 +240,13 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
 
                 <div className="h-80 w-full bg-white flex justify-center items-center rounded-xl border border-gray-300 p-2 overflow-y-auto">
                     {loading ? (
-                        <div className="flex justify-center items-center">
-                            <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent">
-                            </div></div>
+                        <div className="flex flex-col justify-center items-center">
+                            <div
+                                className="w-12 h-12 border-4 border-blue-400 border-dashed rounded-full animate-spin mb-4"
+                                style={{ animationDuration: "10s" }}
+                            ></div>
+                            <div>正在基于你提供的文件生成知识点笔记</div>
+                        </div>
 
                     ) : AIsummaries && AIsummaries.length > 0 ? (
                         <div className="flex flex-col rounded-xl gap-2 h-full w-full">
@@ -265,7 +269,7 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
                         生成汇总笔记
                     </button>
                     <button
-                        onClick={saveSummaryPDF}
+                        onClick={saveSummaryDocx}
                         className="px-4 py-2 bg-black text-white text-sm rounded-xl hover:bg-gray-800"
                     >
                         保存汇总笔记
@@ -314,15 +318,21 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
                     ) : (
                         <div className="text-gray-400 text-sm">暂无笔记</div>
                     )}
-                    <button
-                        onClick={() => setView("testing")}
-                        className="mt-3 px-4 py-2 bg-black text-white text-sm rounded-xl hover:bg-gray-800"
-                    >
-                        在线测试beta
-                    </button>
+
+                    <div className="relative group w-full sm:w-auto">
+                        <button
+                            onClick={() => setView("testing")}
+                            className="mt-3 w-full px-2 py-3 bg-gradient-to-r bg-black text-white font-semibold text-sm sm:text-base rounded-xl shadow-lg hover:scale-102 transform transition-all duration-300"
+                        >
+                            在线测试 beta
+                        </button>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-black text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-20">
+                            点击此按钮开始在线测试，题目将基于你生成的笔记，辅助巩固知识。
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </div >
 
     )
 }

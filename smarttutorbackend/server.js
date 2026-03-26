@@ -10,6 +10,7 @@ const { Document, Packer, Paragraph, TextRun } = require("docx");
 
 const app = express()
 
+app.use(express.json()); 
 
 // Variable "Project Name", which is used to store the name of the current project. 
 
@@ -17,8 +18,13 @@ const UPLOAD_DIR = path.join(__dirname, "files");
 
 const UPLOAD_DIR2 = path.join(__dirname, "notes");
 
+const UPLOAD_DIR3 = path.join(__dirname, "data");
+
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+
 if (!fs.existsSync(UPLOAD_DIR2)) fs.mkdirSync(UPLOAD_DIR2);
+
+if (!fs.existsSync(UPLOAD_DIR3)) fs.mkdirSync(UPLOAD_DIR3);
 
 
 async function extractDocx(filePath) {
@@ -783,7 +789,7 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
 
             if (!content) {
                 console.error("模型未返回有效内容", completion);
-                continue; 
+                continue;
             }
 
             try {
@@ -806,4 +812,115 @@ app.get("/api/fetchQuestionsBasedOnSummaries", async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+
+app.post("/api/fetchMissingPoints", async (req, res) => {
+    const { wrongText } = req.body;
+
+    if (!wrongText) {
+        return res.status(400).json({ error: "wrongText不能为空" });
+    }
+
+    let model, baseURL;
+
+    if (bigmodel === "Kimi") {
+        model = "kimi-k2-turbo-preview";
+        baseURL = "https://api.moonshot.cn/v1";
+    } else if (bigmodel === "Qwen") {
+        model = "qwen-plus";
+        baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    } else if (bigmodel === "Deepseek") {
+        model = "deepseek-chat";
+        baseURL = "https://api.deepseek.com";
+    }
+
+    const client = new OpenAI({
+        apiKey,
+        baseURL,
+    });
+
+    try {
+        const completion = await client.chat.completions.create({
+            model,
+            messages: [
+                {
+                    role: "system",
+                    content: "你是一个根据错题本总结缺乏知识点和学习建议的老师"
+                },
+                {
+                    role: "user",
+                    content: `请基于以下错题总结知识薄弱点，知识薄弱点可以分点列举，并给出概括的学习建议，不超过200字，以下是错题${wrongText}`
+                }
+            ]
+        });
+
+        const content = extractContent(completion);
+        res.json({ success: true, data: content });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+app.post("/api/saveWrongQuestion", (req, res) => {
+    const { projectName, question, yourAnswer, correctAnswer } = req.body;
+
+    if (!projectName || !question) {
+        return res.status(400).json({ error: "missing params" });
+    }
+
+    const filePath = path.join(UPLOAD_DIR3, "wrongQuestions.json");
+
+    let data = {};
+
+    if (fs.existsSync(filePath)) {
+        data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    }
+
+    if (!data[projectName]) {
+        data[projectName] = [];
+    }
+
+    data[projectName].push({
+        question,
+        yourAnswer,
+        correctAnswer,
+    });
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+
+    res.json({ success: true });
+});
+
+
+app.get("/api/getWrongQuestions", (req, res) => {
+
+    const filePath = path.join(UPLOAD_DIR3, "wrongQuestions.json");
+
+    if (!fs.existsSync(filePath)) {
+        return res.json({ data: {} });
+    }
+
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+    res.json({ data });
+});
+
+
+app.delete("/api/deleteWrongQuestions", (req, res) => {
+  const filePath = path.join(UPLOAD_DIR3, "wrongQuestions.json");
+
+  if (!fs.existsSync(filePath)) {
+    return res.json({ success: true, message: "文件已不存在" });
+  }
+
+  try {
+    fs.unlinkSync(filePath);
+    res.json({ success: true, message: "错题已全部删除" });
+  } catch (err) {
+    console.error("删除错题文件失败:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
