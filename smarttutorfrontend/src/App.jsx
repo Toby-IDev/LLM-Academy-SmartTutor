@@ -208,7 +208,7 @@ function App() {
               className="w-64 h-40 border-2 border-dashed border-gray-400 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition"
             >
               <div className="text-4xl text-gray-500">+</div>
-              <div className="text-gray-600 mt-2">Create Project</div>
+              <div className="text-gray-600 mt-2">新建复习仓库</div>
             </div>
           </>
         )}
@@ -216,10 +216,10 @@ function App() {
         {open && (
           <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
             <div className="bg-white p-6 rounded-xl w-80 shadow-lg">
-              <h2 className="text-lg font-semibold mb-4">New Project</h2>
+              <h2 className="text-lg font-semibold mb-4">新建的复习仓库</h2>
               <input
                 type="text"
-                placeholder="Project name"
+                placeholder="仓库名称"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4"
