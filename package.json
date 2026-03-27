@@ -1,0 +1,19 @@
+{
+  "name": "smarttutor",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node server.js",
+    "start:frontend": "cd smarttutorfrontend && npm run dev",
+    "start:backend": "cd smarttutorbackend && npm run dev",
+    "start": "concurrently -n BACKEND,FRONTEND -c magenta,cyan \"npm run start:backend\" \"npm run start:frontend\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

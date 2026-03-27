@@ -1,4 +1,11 @@
 {
+  "name": "smarttutorbackend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "docx": "^9.6.1",
