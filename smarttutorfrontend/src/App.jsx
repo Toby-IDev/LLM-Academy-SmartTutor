@@ -4,6 +4,7 @@ import MainPage from './components/MainPage';
 import Setting from './components/Setting';
 import Testing from './components/Testing';
 import WrongQuestionBook from './components/WrongQuestionBook';
+import FAQ from './components/FAQ.jsx';
 
 
 function App() {
@@ -111,7 +112,7 @@ function App() {
           />
 
           <h1 className="text-lg font-semibold">
-            GPT-academy
+            LLM-academy
           </h1>
         </div>
 
@@ -128,6 +129,12 @@ function App() {
               className="px-4 py-2 text-white font-semibold bg-gradient-to-r from-gray-800 to-black rounded-full shadow-md hover:shadow-lg hover:scale-105 transition transform duration-200 border border-gray-700"
             >
               错题本
+            </button>
+             <button
+              onClick={() => setView("faq")}
+              className="px-4 py-2 text-white font-semibold bg-gradient-to-r from-gray-800 to-black rounded-full shadow-md hover:shadow-lg hover:scale-105 transition transform duration-200 border border-gray-700"
+            >
+              FAQ用户支持
             </button>
           </div>
 
@@ -154,7 +161,12 @@ function App() {
             goBack={() => { setSelectedProject(null); setView("home") }}
             setView={setView}
           />
-        ) : selectedProject ? (
+        ) : view === "faq" ? (
+          <FAQ>
+            goBack={() => { setSelectedProject(null); setView("home") }}
+            setView={setView}
+          </FAQ>
+        ): selectedProject ? (
           <MainPage
             projectName={selectedProject}
             goBack={() => { setSelectedProject(null); setView("home") }}

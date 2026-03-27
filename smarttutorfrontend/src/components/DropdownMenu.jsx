@@ -34,6 +34,15 @@ function DropdownMenu({ setView }) {
           >
             错题本
           </button>
+          <button
+            onClick={() => {
+              setView("faq");
+              setOpen(false);
+            }}
+            className="px-4 py-2 hover:bg-gray-100 text-left"
+          >
+            错题本
+          </button>
 
         </div>
       )}

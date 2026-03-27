@@ -59,7 +59,6 @@ function WrongQuestionsBook({ goBack }) {
     return (
         <div className="flex w-full h-full p-6 gap-6">
 
-
             <div className="w-1/4 border-r pr-4">
                 <h2 className="text-lg font-semibold mb-4">项目列表</h2>
 
@@ -79,16 +78,16 @@ function WrongQuestionsBook({ goBack }) {
                         </div>
                     ))
                 )}
-                <div className="flex items-center justify-center gap-8 mt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-4">
                     <button
                         onClick={deleteWrong}
-                        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition"
+                        className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition"
                     >
                         删除所有错题
                     </button>
                     <button
                         onClick={goBack}
-                        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition"
+                        className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition"
                     >
                         返回
                     </button>

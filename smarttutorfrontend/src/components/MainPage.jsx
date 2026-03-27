@@ -322,9 +322,9 @@ function MainPage({ projectName, goBack, setView, setQuestions }) {
                     <div className="relative group w-full sm:w-auto">
                         <button
                             onClick={() => setView("testing")}
-                            className="mt-3 w-full px-2 py-3 bg-gradient-to-r bg-black text-white font-semibold text-sm sm:text-base rounded-xl shadow-lg hover:scale-102 transform transition-all duration-300"
+                            className="mt-3 w-full px-2 py-3 bg-gradient-to-r bg-black text-white text-sm font-semibold text-sm sm:text-base rounded-xl shadow-lg hover:scale-102 transform transition-all duration-300"
                         >
-                            在线测试 beta
+                            在线测试
                         </button>
                         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-black text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-20">
                             点击此按钮开始在线测试，题目将基于你生成的笔记，辅助巩固知识。
