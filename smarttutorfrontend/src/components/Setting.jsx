@@ -7,11 +7,9 @@ function Setting({ setView }) {
     const [api, setAPI] = useState("");
     const [model, setModel] = useState("");
 
-    const sendToBackend = async () => {
-
-
-        await fetch("http://localhost:1888/api/getAPI", {
-
+   const sendToBackend = async () => {
+    try {
+        const response = await fetch("http://localhost:1888/api/getAPI", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -21,7 +19,17 @@ function Setting({ setView }) {
                 model: model
             })
         });
-    };
+
+        if (response.ok) {
+            alert("保存成功！");
+        } else {
+            alert("保存失败，请重试！");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("请求出错，请重试！");
+    }
+};
 
 
 
