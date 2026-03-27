@@ -20,7 +20,7 @@ function DropdownMenu({ setView }) {
               setView("setting");
               setOpen(false);
             }}
-            className="px-4 py-2 hover:bg-gray-100 text-left"
+            className="px-4 py-2 hover:bg-gray-100"
           >
             Setting设置
           </button>
@@ -30,7 +30,7 @@ function DropdownMenu({ setView }) {
               setView("wrongquestionsbook");
               setOpen(false);
             }}
-            className="px-4 py-2 hover:bg-gray-100 text-left"
+            className="px-4 py-2 hover:bg-gray-100"
           >
             错题本
           </button>
@@ -39,9 +39,9 @@ function DropdownMenu({ setView }) {
               setView("faq");
               setOpen(false);
             }}
-            className="px-4 py-2 hover:bg-gray-100 text-left"
+            className="px-4 py-2 hover:bg-gray-100"
           >
-            错题本
+            FAQ
           </button>
 
         </div>
