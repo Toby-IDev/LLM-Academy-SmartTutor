@@ -1,6 +1,6 @@
 # LLM-Academy-SmartTutor (大模型导师）
 
-![Babel Banner](https://img.shields.io/badge/Status-Beta-gold) ![License](https://img.shields.io/badge/License-MIT-blue) ![Tech](https://img.shields.io/badge/Tech-React%20%7C%20Vite%20%7C%20)
+![Babel Banner](https://img.shields.io/badge/Status-Beta-gold) [![License](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE) ![Tech](https://img.shields.io/badge/Tech-React%20%7CVite-blue)
 
 [中文](#中文-chinese) | [English](#english)
 
